@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:confetti/confetti.dart';
@@ -20,9 +21,14 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
   late final List<String> _labels;
 
   final List<Color> palette = const [
-    Color(0xFFFF6B6B), Color(0xFFFFD93D), Color(0xFF6BCB77),
-    Color(0xFF4D96FF), Color(0xFFB983FF), Color(0xFFFF9F45),
-    Color(0xFF45D3E8), Color(0xFFF06292),
+    Color(0xFFFF6B6B),
+    Color(0xFFFFD93D),
+    Color(0xFF6BCB77),
+    Color(0xFF4D96FF),
+    Color(0xFFB983FF),
+    Color(0xFFFF9F45),
+    Color(0xFF45D3E8),
+    Color(0xFFF06292),
   ];
 
   late final AnimationController _spinCtrl;
@@ -42,20 +48,33 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
     _labels = (widget.entries != null && widget.entries!.isNotEmpty)
         ? widget.entries!
         : const [
-            '🏆 รางวัลใหญ่', '🎁 ของรางวัลที่ 2', '🎟 คูปองส่วนลด',
-            '👕 เสื้อที่ระลึก', '☕ บัตรกาแฟ', '📦 กล่องสุ่ม',
+            '🏆 รางวัลใหญ่',
+            '🎁 ของรางวัลที่ 2',
+            '🎟 คูปองส่วนลด',
+            '👕 เสื้อที่ระลึก',
+            '☕ บัตรกาแฟ',
+            '📦 กล่องสุ่ม',
           ];
 
     _spinCtrl = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 5),
     );
-    _idleCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 6))..repeat();
+    _idleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 6),
+    )..repeat();
     _confettiCtrl = ConfettiController(duration: const Duration(seconds: 2));
 
     _spinCtrl.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
+        if (_winnerIndex > 0) {
+          //_labels.removeAt(_winnerIndex);
+          //await SupabaseService.markWinner(participantId: winner['id'], eventId: widget.eventId, prize: "วงล้อนำโชค");
+        }
+
         setState(() {
+          //_labels.removeAt(_winnerIndex);
           _spinning = false;
           _revealed = true;
         });
@@ -78,6 +97,17 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
 
   void _spin() {
     if (_spinning || _labels.isEmpty) return;
+    if (_labels.length == 1) {
+      // ถ้ามีแค่ตัวเลือกเดียว ให้ข้ามการหมุนและแสดงผลทันที
+      setState(() {
+        _spinning = false;
+        _revealed = true;
+        _winnerIndex = 0;
+      });
+      SfxService.win();
+      _confettiCtrl.play();
+      return;
+    }
     final rnd = Random();
     final chosen = rnd.nextInt(_labels.length);
     final segmentAngle = 2 * pi / _labels.length;
@@ -99,9 +129,10 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
     SfxService.startSpinLoop();
 
     _spinCtrl.reset();
-    final anim = Tween<double>(begin: 0, end: finalAngle).animate(
-      CurvedAnimation(parent: _spinCtrl, curve: Curves.easeOutQuart),
-    );
+    final anim = Tween<double>(
+      begin: 0,
+      end: finalAngle,
+    ).animate(CurvedAnimation(parent: _spinCtrl, curve: Curves.easeOutQuart));
 
     anim.addListener(() {
       setState(() {});
@@ -119,6 +150,10 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
 
   void _reset() {
     setState(() {
+      if (_winnerIndex >= 0) {
+        _labels.removeAt(_winnerIndex);
+        //await SupabaseService.markWinner(participantId: winner['id'], eventId: widget.eventId, prize: "วงล้อนำโชค");
+      }
       _revealed = false;
     });
     _spinCtrl.reset();
@@ -134,8 +169,13 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                colors: [Color(0xFF1B1036), Color(0xFF3A1F63), Color(0xFF0E0620)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF1B1036),
+                  Color(0xFF3A1F63),
+                  Color(0xFF0E0620),
+                ],
               ),
             ),
           ),
@@ -164,13 +204,19 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
                       child: const Text(
                         '🎡 วงล้อนำโชค',
                         style: TextStyle(
-                          fontSize: 26, fontWeight: FontWeight.w900,
-                          color: Colors.white, letterSpacing: 2,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 2,
                         ),
                       ),
                     ),
                     const SizedBox(height: 30),
-                    SizedBox(width: 300, height: 300, child: _buildWheelArea(angle)),
+                    SizedBox(
+                      width: 300,
+                      height: 300,
+                      child: _buildWheelArea(angle),
+                    ),
                     const SizedBox(height: 34),
                     _buildControls(),
                   ],
@@ -179,12 +225,15 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
             ),
           ),
           Positioned(
-            top: 12, left: 12,
+            top: 12,
+            left: 12,
             child: SafeArea(
               child: IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-                style: IconButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.15)),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.15),
+                ),
               ),
             ),
           ),
@@ -202,21 +251,30 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
           alignment: Alignment.center,
           children: [
             Container(
-              width: 300, height: 300,
+              width: 300,
+              height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
-                  BoxShadow(color: Colors.purpleAccent.withOpacity(glow), blurRadius: 50, spreadRadius: 6),
+                  BoxShadow(
+                    color: Colors.purpleAccent.withOpacity(glow),
+                    blurRadius: 50,
+                    spreadRadius: 6,
+                  ),
                 ],
               ),
             ),
             Transform.rotate(
               angle: angle,
               child: Container(
-                width: 270, height: 270,
+                width: 270,
+                height: 270,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.7), width: 4),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.7),
+                    width: 4,
+                  ),
                 ),
                 child: CustomPaint(
                   painter: _WheelPainter(labels: _labels, colors: palette),
@@ -228,22 +286,36 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
               return Transform.translate(
                 offset: Offset(cos(a) * 138, sin(a) * 138),
                 child: Container(
-                  width: 8, height: 8,
+                  width: 8,
+                  height: 8,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.amberAccent,
-                    boxShadow: [BoxShadow(color: Colors.amberAccent.withOpacity(0.7), blurRadius: 6)],
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.amberAccent.withOpacity(0.7),
+                        blurRadius: 6,
+                      ),
+                    ],
                   ),
                 ),
               );
             }),
             Container(
-              width: 46, height: 46,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const RadialGradient(colors: [Colors.white, Color(0xFFDDDDDD)]),
+                gradient: const RadialGradient(
+                  colors: [Colors.white, Color(0xFFDDDDDD)],
+                ),
                 border: Border.all(color: Colors.black26, width: 3),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 8)],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.4),
+                    blurRadius: 8,
+                  ),
+                ],
               ),
               child: const Icon(Icons.star, color: Color(0xFFC9184A), size: 20),
             ),
@@ -262,17 +334,40 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
-              gradient: const LinearGradient(colors: [Color(0xFFFFF3C4), Color(0xFFFFD166), Color(0xFFFFA45C)]),
-              boxShadow: [BoxShadow(color: Colors.orangeAccent.withOpacity(0.6), blurRadius: 24, spreadRadius: 2)],
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFFFFF3C4),
+                  Color(0xFFFFD166),
+                  Color(0xFFFFA45C),
+                ],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orangeAccent.withOpacity(0.6),
+                  blurRadius: 24,
+                  spreadRadius: 2,
+                ),
+              ],
             ),
             child: Column(
               children: [
-                const Text('🎉 ยินดีด้วย 🎉',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFC9184A))),
+                const Text(
+                  '🎉 ยินดีด้วย 🎉',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFC9184A),
+                  ),
+                ),
                 const SizedBox(height: 6),
-                Text(_labels[_winnerIndex],
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Colors.black87)),
+                Text(
+                  _labels[_winnerIndex],
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.black87,
+                  ),
+                ),
               ],
             ),
           ),
@@ -280,11 +375,17 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
           ElevatedButton.icon(
             onPressed: _reset,
             icon: const Icon(Icons.replay),
-            label: const Text('หมุนอีกครั้ง', style: TextStyle(fontWeight: FontWeight.bold)),
+            label: const Text(
+              'หมุนอีกครั้ง',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white, foregroundColor: const Color(0xFF3A1F63),
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF3A1F63),
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
             ),
           ),
         ],
@@ -293,7 +394,8 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
     return ElevatedButton(
       onPressed: _spinning ? null : _spin,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFFF4D6D), foregroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFF4D6D),
+        foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         elevation: 10,
@@ -329,7 +431,8 @@ class _ArrowPainter extends CustomPainter {
       Paint()
         ..shader = const LinearGradient(
           colors: [Color(0xFFFFE066), Color(0xFFFF9F45)],
-          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
     );
   }
@@ -363,7 +466,10 @@ class _WheelPainter extends CustomPainter {
       canvas.drawArc(rect, startAngle, segmentAngle, true, paint);
 
       canvas.drawArc(
-        rect, startAngle, segmentAngle, true,
+        rect,
+        startAngle,
+        segmentAngle,
+        true,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2
@@ -382,7 +488,9 @@ class _WheelPainter extends CustomPainter {
         text: TextSpan(
           text: labels[i],
           style: const TextStyle(
-            color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
             shadows: [Shadow(color: Colors.black45, blurRadius: 3)],
           ),
         ),

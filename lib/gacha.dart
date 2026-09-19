@@ -18,7 +18,8 @@ class GachaApp extends StatelessWidget {
 enum GachaState { idle, shaking, dropping, cracking, revealed }
 
 class GachaScreen extends StatefulWidget {
-  const GachaScreen({super.key});
+  final List<String>? entries;
+  const GachaScreen({super.key, this.entries});
   @override
   State<GachaScreen> createState() => _GachaScreenState();
 }

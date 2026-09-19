@@ -4,6 +4,28 @@ import 'package:gacha1/spinwheels.dart';
 
 class SelectGameScreen extends StatelessWidget {
   const SelectGameScreen({super.key});
+  final participantsList = const [
+    {'full_name': 'John Doe'},
+    {'full_name': 'Jane Smith'},
+    {'full_name': 'Alice Johnson'},
+    {'full_name': 'Bob Brown'},
+    {'full_name': 'Charlie Davis'},
+    {'full_name': 'Emily Wilson'},
+    /*{'full_name': 'Frank Miller'},
+    {'full_name': 'Grace Lee'},
+    {'full_name': 'Henry Clark'},
+    {'full_name': 'Isabella Lewis'},
+    {'full_name': 'Jack Walker'},
+    {'full_name': 'Katherine Hall'},
+    {'full_name': 'Liam Allen'},
+    {'full_name': 'Mia Young'},
+    {'full_name': 'Noah King'},
+    {'full_name': 'Olivia Scott'},
+    {'full_name': 'Paul Adams'},
+    {'full_name': 'Quinn Baker'},
+    {'full_name': 'Ryan Nelson'},
+    {'full_name': 'Sophia Carter'},*/
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +65,7 @@ class SelectGameScreen extends StatelessWidget {
                       colors: const [Color(0xFFFF4D6D), Color(0xFFC9184A)],
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const GachaScreen()),
+                        MaterialPageRoute(builder: (_) => GachaScreen(entries: participantsList.map((p) => p['full_name'] as String).toList())),
                       ),
                     ),
                     _GameCard(
@@ -53,7 +75,7 @@ class SelectGameScreen extends StatelessWidget {
                       colors: const [Color(0xFF4D96FF), Color(0xFF2E5FCC)],
                       onTap: () => Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const SpinWheelScreen()),
+                        MaterialPageRoute(builder: (_) => SpinWheelScreen(entries: participantsList.map((p) => p['full_name'] as String).toList(),)),
                       ),
                     ),
                   ],
