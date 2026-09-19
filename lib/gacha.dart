@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'package:flutter/services.dart';
@@ -9,10 +10,8 @@ double _lerp(double a, double b, double t) => a + (b - a) * t;
 class GachaApp extends StatelessWidget {
   const GachaApp({super.key});
   @override
-  Widget build(BuildContext context) => const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: GachaScreen(),
-      );
+  Widget build(BuildContext context) =>
+      const MaterialApp(debugShowCheckedModeBanner: false, home: GachaScreen());
 }
 
 enum GachaState { idle, shaking, dropping, cracking, revealed }
@@ -26,6 +25,7 @@ class GachaScreen extends StatefulWidget {
 
 class _GachaScreenState extends State<GachaScreen>
     with TickerProviderStateMixin {
+  late final List<String> _participants;
   final List<Map<String, String>> prizes = [
     {'name': '🏆 ทองคำแท้ 1 บาท', 'sub': 'รางวัลใหญ่'},
     {'name': '💵 บัตรเงินสด 500.-', 'sub': 'ของรางวัลพิเศษ'},
@@ -35,8 +35,12 @@ class _GachaScreenState extends State<GachaScreen>
   ];
 
   final List<Color> palette = const [
-    Color(0xFFFF6B6B), Color(0xFFFFD93D), Color(0xFF6BCB77),
-    Color(0xFF4D96FF), Color(0xFFB983FF), Color(0xFFFF9F45),
+    Color(0xFFFF6B6B),
+    Color(0xFFFFD93D),
+    Color(0xFF6BCB77),
+    Color(0xFF4D96FF),
+    Color(0xFFB983FF),
+    Color(0xFFFF9F45),
   ];
 
   late final List<Offset> _domePos;
@@ -53,27 +57,52 @@ class _GachaScreenState extends State<GachaScreen>
   GachaState _state = GachaState.idle;
   Map<String, String> _prize = {'name': '', 'sub': ''};
   Color _winnerColor = Colors.pink;
+  int _winnerIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _participants = (widget.entries != null && widget.entries!.isNotEmpty)
+        ? widget.entries!
+        : const [
+            '🏆 ทองคำแท้ 1 บาท',
+            '💵 บัตรเงินสด 500.-',
+            '🧸 ตุ๊กตาลิมิเต็ด',
+            '🎟 คูปองส่วนลด 20%',
+            '👕 เสื้อยืดพรีเมียม',
+          ];
     final rnd = Random(11);
     _domePos = List.generate(14, (i) {
       final a = rnd.nextDouble() * 2 * pi;
       final r = 0.32 + rnd.nextDouble() * 0.5;
       return Offset(cos(a) * r, sin(a) * r);
     });
-    _domeColors = List.generate(14, (i) => palette[rnd.nextInt(palette.length)]);
+    _domeColors = List.generate(
+      14,
+      (i) => palette[rnd.nextInt(palette.length)],
+    );
     _domePhase = List.generate(14, (i) => rnd.nextDouble() * 2 * pi);
     _sparkleDirs = List.generate(10, (i) {
       final a = rnd.nextDouble() * 2 * pi;
       return Offset(cos(a), sin(a));
     });
 
-    _idleCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat();
-    _shakeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
-    _dropCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 750));
-    _crackCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _idleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
+    _shakeCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _dropCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 750),
+    );
+    _crackCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
     _confettiCtrl = ConfettiController(duration: const Duration(seconds: 2));
   }
 
@@ -87,31 +116,31 @@ class _GachaScreenState extends State<GachaScreen>
     super.dispose();
   }
 
-Future<void> _playGacha() async {
-  if (_state != GachaState.idle) return;
-  final rnd = Random();
-  _prize = prizes[rnd.nextInt(prizes.length)];
-  _winnerColor = palette[rnd.nextInt(palette.length)];
+  Future<void> _playGacha() async {
+    if (_state != GachaState.idle) return;
+    final rnd = Random();
+    _prize = prizes[rnd.nextInt(prizes.length)];
+    _winnerColor = palette[rnd.nextInt(palette.length)];
 
-  SfxService.click();
-  HapticFeedback.lightImpact();
+    SfxService.click();
+    HapticFeedback.lightImpact();
 
-  setState(() => _state = GachaState.shaking);
-  SfxService.shake();
-  await _shakeCtrl.forward(from: 0);
+    setState(() => _state = GachaState.shaking);
+    SfxService.shake();
+    await _shakeCtrl.forward(from: 0);
 
-  setState(() => _state = GachaState.dropping);
-  SfxService.drop();
-  await _dropCtrl.forward(from: 0);
+    setState(() => _state = GachaState.dropping);
+    SfxService.drop();
+    await _dropCtrl.forward(from: 0);
 
-  setState(() => _state = GachaState.cracking);
-  await _crackCtrl.forward(from: 0);
+    setState(() => _state = GachaState.cracking);
+    await _crackCtrl.forward(from: 0);
 
-  setState(() => _state = GachaState.revealed);
-  HapticFeedback.heavyImpact();
-  SfxService.reveal();
-  _confettiCtrl.play();
-}
+    setState(() => _state = GachaState.revealed);
+    HapticFeedback.heavyImpact();
+    SfxService.reveal();
+    _confettiCtrl.play();
+  }
 
   void _reset() {
     _shakeCtrl.reset();
@@ -148,27 +177,35 @@ Future<void> _playGacha() async {
                       shaderCallback: (r) => const LinearGradient(
                         colors: [Color(0xFFFFE066), Color(0xFFFF9F45)],
                       ).createShader(r),
-                      child: const Text('🎰 GACHA MACHINE',
-                          style: TextStyle(
-                              fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 2)),
+                      child: const Text(
+                        '🎰 GACHA MACHINE',
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: 2,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 28),
                     SizedBox(height: 380, width: 300, child: _buildMachine()),
                     const SizedBox(height: 26),
                     _buildControls(),
-                    
                   ],
                 ),
               ],
             ),
           ),
           Positioned(
-            top: 12, left: 12,
+            top: 12,
+            left: 12,
             child: SafeArea(
               child: IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-                style: IconButton.styleFrom(backgroundColor: Colors.white.withValues(alpha: 0.15)),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.15),
+                ),
               ),
             ),
           ),
@@ -186,7 +223,8 @@ Future<void> _playGacha() async {
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
               colors: [Color(0xFF1B1036), Color(0xFF3A1F63), Color(0xFF0E0620)],
             ),
           ),
@@ -196,23 +234,37 @@ Future<void> _playGacha() async {
   }
 
   Widget _buildMachine() {
-  return AnimatedBuilder(
-    animation: Listenable.merge([_idleCtrl, _shakeCtrl, _dropCtrl, _crackCtrl]),
-    builder: (context, _) {
-      return Stack(
-        alignment: Alignment.center,
-        children: [
-          _buildGroundShadow(),
-          Align(alignment: const Alignment(0, -0.35), child: _buildDome()),   // ⬅️ ดันโดมขึ้นบน
-          Align(alignment: const Alignment(0, 0.75), child: _buildBase()),    // ⬅️ ดันฐานลงล่าง
-          if (_state == GachaState.dropping) _buildFallingCapsule(),
-          if (_state == GachaState.cracking || _state == GachaState.revealed)
-            Transform.translate(offset: const Offset(0, 95), child: _buildCrackOpen()),
-        ],
-      );
-    },
-  );
-}
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        _idleCtrl,
+        _shakeCtrl,
+        _dropCtrl,
+        _crackCtrl,
+      ]),
+      builder: (context, _) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            _buildGroundShadow(),
+            Align(
+              alignment: const Alignment(0, -0.35),
+              child: _buildDome(),
+            ), // ⬅️ ดันโดมขึ้นบน
+            Align(
+              alignment: const Alignment(0, 0.75),
+              child: _buildBase(),
+            ), // ⬅️ ดันฐานลงล่าง
+            if (_state == GachaState.dropping) _buildFallingCapsule(),
+            if (_state == GachaState.cracking || _state == GachaState.revealed)
+              Transform.translate(
+                offset: const Offset(0, 95),
+                child: _buildCrackOpen(),
+              ),
+          ],
+        );
+      },
+    );
+  }
 
   Widget _buildGroundShadow() {
     double scale = 1.0, opacity = 0.35;
@@ -235,7 +287,12 @@ Future<void> _playGacha() async {
             height: 26,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(13),
-              gradient: RadialGradient(colors: [Colors.black.withValues(alpha: 0.55), Colors.transparent]),
+              gradient: RadialGradient(
+                colors: [
+                  Colors.black.withValues(alpha: 0.55),
+                  Colors.transparent,
+                ],
+              ),
             ),
           ),
         ),
@@ -249,8 +306,12 @@ Future<void> _playGacha() async {
       opacity = (1 - _dropCtrl.value).clamp(0.0, 1.0);
     }
     final decay = 1 - _shakeCtrl.value;
-    final dx = _state == GachaState.shaking ? sin(_shakeCtrl.value * pi * 16) * 9 * decay : 0.0;
-    final rot = _state == GachaState.shaking ? sin(_shakeCtrl.value * pi * 16) * 0.06 * decay : 0.0;
+    final dx = _state == GachaState.shaking
+        ? sin(_shakeCtrl.value * pi * 16) * 9 * decay
+        : 0.0;
+    final rot = _state == GachaState.shaking
+        ? sin(_shakeCtrl.value * pi * 16) * 0.06 * decay
+        : 0.0;
 
     return Opacity(
       opacity: opacity,
@@ -262,14 +323,25 @@ Future<void> _playGacha() async {
             width: 230,
             height: 210,
             decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(115)),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.55), width: 2.5),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(115),
+              ),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.55),
+                width: 2.5,
+              ),
               boxShadow: [
-                BoxShadow(color: Colors.purpleAccent.withValues(alpha: 0.45), blurRadius: 35, spreadRadius: 3),
+                BoxShadow(
+                  color: Colors.purpleAccent.withValues(alpha: 0.45),
+                  blurRadius: 35,
+                  spreadRadius: 3,
+                ),
               ],
             ),
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(115)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(115),
+              ),
               child: Stack(
                 children: [
                   Container(
@@ -286,7 +358,8 @@ Future<void> _playGacha() async {
                     ),
                   ),
                   ...List.generate(_domePos.length, (i) {
-                    final bob = sin(_idleCtrl.value * 2 * pi + _domePhase[i]) * 3;
+                    final bob =
+                        sin(_idleCtrl.value * 2 * pi + _domePhase[i]) * 3;
                     final pos = _domePos[i];
                     return Align(
                       alignment: Alignment(pos.dx, pos.dy),
@@ -297,22 +370,25 @@ Future<void> _playGacha() async {
                     );
                   }),
                   Positioned.fill(
-  child: Transform.translate(
-    offset: const Offset(20, -40),
-    child: Transform.rotate(
-      angle: -0.5,
-      child: Container(
-        width: 55,
-        height: 210,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.white.withValues(alpha: 0.28), Colors.white.withValues(alpha: 0.0)],
-          ),
-        ),
-      ),
-    ),
-  ),
-),
+                    child: Transform.translate(
+                      offset: const Offset(20, -40),
+                      child: Transform.rotate(
+                        angle: -0.5,
+                        child: Container(
+                          width: 55,
+                          height: 210,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withValues(alpha: 0.28),
+                                Colors.white.withValues(alpha: 0.0),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -336,33 +412,57 @@ Future<void> _playGacha() async {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: const LinearGradient(
-          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
           colors: [Color(0xFFFF6B87), Color(0xFFC9184A), Color(0xFF8C0F35)],
         ),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.5),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.5), blurRadius: 14, offset: const Offset(0, 8))],
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.25),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.5),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Stack(
         alignment: Alignment.center,
         children: [
           Center(
             child: Container(
-              width: 62, height: 62,
+              width: 62,
+              height: 62,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: const RadialGradient(colors: [Colors.white, Color(0xFFDDDDDD)]),
+                gradient: const RadialGradient(
+                  colors: [Colors.white, Color(0xFFDDDDDD)],
+                ),
                 border: Border.all(color: Colors.black26, width: 3),
-                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 6)],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 6,
+                  ),
+                ],
               ),
-              child: const Icon(Icons.circle, color: Color(0xFFC9184A), size: 20),
+              child: const Icon(
+                Icons.circle,
+                color: Color(0xFFC9184A),
+                size: 20,
+              ),
             ),
           ),
           Positioned(
-            right: 14, top: 14,
+            right: 14,
+            top: 14,
             child: Transform.rotate(
               angle: spinning ? _shakeCtrl.value * 6 * pi : 0,
               child: Container(
-                width: 26, height: 26,
+                width: 26,
+                height: 26,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white.withValues(alpha: 0.9),
@@ -373,14 +473,22 @@ Future<void> _playGacha() async {
             ),
           ),
           Positioned(
-            left: 16, bottom: 12,
+            left: 16,
+            bottom: 12,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),
-              width: 12, height: 12,
+              width: 12,
+              height: 12,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: ledColor,
-                boxShadow: [BoxShadow(color: ledColor.withValues(alpha: 0.8), blurRadius: 8, spreadRadius: 1)],
+                boxShadow: [
+                  BoxShadow(
+                    color: ledColor.withValues(alpha: 0.8),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ],
               ),
             ),
           ),
@@ -390,21 +498,22 @@ Future<void> _playGacha() async {
   }
 
   Widget _buildFallingCapsule() {
-  final raw = Curves.easeIn.transform(_dropCtrl.value);
-  final dy = _lerp(50, 100, raw);   // ⬅️ เปลี่ยนจาก _lerp(-30, 95, raw)
-  double squash = 0;
-  if (raw > 0.85) squash = sin((raw - 0.85) / 0.15 * pi) * 0.28;
-  return Opacity(
-    opacity: raw.clamp(0.0, 1.0),
-    child: Transform.translate(
-      offset: Offset(0, dy),
-      child: Transform.scale(
-        scaleX: 1 + squash, scaleY: 1 - squash,
-        child: _Capsule3D(size: 72, color: _winnerColor),
+    final raw = Curves.easeIn.transform(_dropCtrl.value);
+    final dy = _lerp(50, 100, raw); // ⬅️ เปลี่ยนจาก _lerp(-30, 95, raw)
+    double squash = 0;
+    if (raw > 0.85) squash = sin((raw - 0.85) / 0.15 * pi) * 0.28;
+    return Opacity(
+      opacity: raw.clamp(0.0, 1.0),
+      child: Transform.translate(
+        offset: Offset(0, dy),
+        child: Transform.scale(
+          scaleX: 1 + squash,
+          scaleY: 1 - squash,
+          child: _Capsule3D(size: 72, color: _winnerColor),
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildCrackOpen() {
     final t = _crackCtrl.value;
@@ -422,7 +531,11 @@ Future<void> _playGacha() async {
             opacity: op,
             child: Transform.translate(
               offset: Offset(dir.dx * dist, dir.dy * dist),
-              child: const Icon(Icons.star, color: Colors.amberAccent, size: 14),
+              child: const Icon(
+                Icons.star,
+                color: Colors.amberAccent,
+                size: 14,
+              ),
             ),
           );
         }),
@@ -436,33 +549,64 @@ Future<void> _playGacha() async {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(22),
                 gradient: const LinearGradient(
-                  colors: [Color(0xFFFFF3C4), Color(0xFFFFD166), Color(0xFFFFA45C)],
+                  colors: [
+                    Color(0xFFFFF3C4),
+                    Color(0xFFFFD166),
+                    Color(0xFFFFA45C),
+                  ],
                 ),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 2),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  width: 2,
+                ),
                 boxShadow: [
-                  BoxShadow(color: Colors.orangeAccent.withValues(alpha: 0.6), blurRadius: 28, spreadRadius: 3),
+                  BoxShadow(
+                    color: Colors.orangeAccent.withValues(alpha: 0.6),
+                    blurRadius: 28,
+                    spreadRadius: 3,
+                  ),
                 ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFC9184A),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text('🎉 ยินดีด้วย 🎉',
-                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      '🎉 ยินดีด้วย 🎉',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 10),
-                  Text(_prize['name'] ?? '',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.black87)),
+                  Text(
+                    _prize['name'] ?? '',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.black87,
+                    ),
+                  ),
                   const SizedBox(height: 3),
-                  Text(_prize['sub'] ?? '',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: Colors.black.withValues(alpha: 0.6))),
+                  Text(
+                    _prize['sub'] ?? '',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.black.withValues(alpha: 0.6),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -472,14 +616,20 @@ Future<void> _playGacha() async {
           opacity: shellOpacity,
           child: Transform.translate(
             offset: Offset(0, _lerp(0, -70, t)),
-            child: Transform.rotate(angle: -t * 0.7, child: _CapsuleHalf(color: _winnerColor, isTop: true, size: 72)),
+            child: Transform.rotate(
+              angle: -t * 0.7,
+              child: _CapsuleHalf(color: _winnerColor, isTop: true, size: 72),
+            ),
           ),
         ),
         Opacity(
           opacity: shellOpacity,
           child: Transform.translate(
             offset: Offset(0, _lerp(0, 70, t)),
-            child: Transform.rotate(angle: t * 0.7, child: _CapsuleHalf(color: _winnerColor, isTop: false, size: 72)),
+            child: Transform.rotate(
+              angle: t * 0.7,
+              child: _CapsuleHalf(color: _winnerColor, isTop: false, size: 72),
+            ),
           ),
         ),
       ],
@@ -487,29 +637,41 @@ Future<void> _playGacha() async {
   }
 
   Widget _buildControls() {
-    final isBusy = _state == GachaState.shaking || _state == GachaState.dropping || _state == GachaState.cracking;
+    final isBusy =
+        _state == GachaState.shaking ||
+        _state == GachaState.dropping ||
+        _state == GachaState.cracking;
     if (_state == GachaState.revealed) {
       return ElevatedButton.icon(
         onPressed: _reset,
         icon: const Icon(Icons.replay),
-        label: const Text('เล่นอีกครั้ง', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text(
+          'เล่นอีกครั้ง',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white, foregroundColor: const Color(0xFF3A1F63),
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF3A1F63),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
         ),
       );
     }
     return ElevatedButton(
       onPressed: isBusy ? null : _playGacha,
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFFFF4D6D), foregroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFF4D6D),
+        foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
         elevation: 10,
       ),
-      child: Text(isBusy ? 'กำลังสุ่ม...' : '🎲 หมุนกาชาปอง',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+      child: Text(
+        isBusy ? 'กำลังสุ่ม...' : '🎲 หมุนกาชาปอง',
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
     );
   }
 }
@@ -546,8 +708,11 @@ class _Capsule3D extends StatelessWidget {
   final Color color;
   const _Capsule3D({required this.size, required this.color});
   @override
-  Widget build(BuildContext context) =>
-      SizedBox(width: size, height: size, child: CustomPaint(painter: _Capsule3DPainter(color)));
+  Widget build(BuildContext context) => SizedBox(
+    width: size,
+    height: size,
+    child: CustomPaint(painter: _Capsule3DPainter(color)),
+  );
 }
 
 class _Capsule3DPainter extends CustomPainter {
@@ -565,45 +730,79 @@ class _Capsule3DPainter extends CustomPainter {
         ..shader = RadialGradient(
           center: const Alignment(-0.4, -0.6),
           radius: 1.0,
-          colors: [Color.lerp(color, Colors.white, 0.55)!, color, Color.lerp(color, Colors.black, 0.25)!],
+          colors: [
+            Color.lerp(color, Colors.white, 0.55)!,
+            color,
+            Color.lerp(color, Colors.black, 0.25)!,
+          ],
           stops: const [0, 0.55, 1],
         ).createShader(rect),
     );
     canvas.restore();
 
     canvas.save();
-    canvas.clipRect(Rect.fromLTWH(0, size.height / 2, size.width, size.height / 2));
+    canvas.clipRect(
+      Rect.fromLTWH(0, size.height / 2, size.width, size.height / 2),
+    );
     canvas.drawOval(
       rect,
       Paint()
         ..shader = const LinearGradient(
-          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
           colors: [Colors.white, Color(0xFFE2E2E2)],
         ).createShader(rect),
     );
     canvas.restore();
 
-    canvas.drawLine(Offset(1.5, size.height / 2), Offset(size.width - 1.5, size.height / 2),
-        Paint()..color = Colors.black.withValues(alpha: 0.18)..strokeWidth = 1.3);
+    canvas.drawLine(
+      Offset(1.5, size.height / 2),
+      Offset(size.width - 1.5, size.height / 2),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.18)
+        ..strokeWidth = 1.3,
+    );
 
-    canvas.drawOval(Rect.fromLTWH(size.width * 0.16, size.height * 0.10, size.width * 0.30, size.height * 0.18),
-        Paint()..color = Colors.white.withValues(alpha: 0.8));
-    canvas.drawOval(Rect.fromLTWH(size.width * 0.64, size.height * 0.55, size.width * 0.12, size.height * 0.09),
-        Paint()..color = Colors.white.withValues(alpha: 0.4));
+    canvas.drawOval(
+      Rect.fromLTWH(
+        size.width * 0.16,
+        size.height * 0.10,
+        size.width * 0.30,
+        size.height * 0.18,
+      ),
+      Paint()..color = Colors.white.withValues(alpha: 0.8),
+    );
+    canvas.drawOval(
+      Rect.fromLTWH(
+        size.width * 0.64,
+        size.height * 0.55,
+        size.width * 0.12,
+        size.height * 0.09,
+      ),
+      Paint()..color = Colors.white.withValues(alpha: 0.4),
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _Capsule3DPainter oldDelegate) => oldDelegate.color != color;
+  bool shouldRepaint(covariant _Capsule3DPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _CapsuleHalf extends StatelessWidget {
   final double size;
   final Color color;
   final bool isTop;
-  const _CapsuleHalf({required this.size, required this.color, required this.isTop});
+  const _CapsuleHalf({
+    required this.size,
+    required this.color,
+    required this.isTop,
+  });
   @override
   Widget build(BuildContext context) => SizedBox(
-      width: size, height: size / 2, child: CustomPaint(painter: _CapsuleHalfPainter(color, isTop)));
+    width: size,
+    height: size / 2,
+    child: CustomPaint(painter: _CapsuleHalfPainter(color, isTop)),
+  );
 }
 
 class _CapsuleHalfPainter extends CustomPainter {
@@ -612,15 +811,23 @@ class _CapsuleHalfPainter extends CustomPainter {
   _CapsuleHalfPainter(this.color, this.isTop);
   @override
   void paint(Canvas canvas, Size size) {
-    final fullRect = Rect.fromLTWH(0, isTop ? 0 : -size.height, size.width, size.height * 2);
+    final fullRect = Rect.fromLTWH(
+      0,
+      isTop ? 0 : -size.height,
+      size.width,
+      size.height * 2,
+    );
     canvas.save();
     canvas.clipRect(Offset.zero & size);
     canvas.drawOval(
       fullRect,
       Paint()
         ..shader = isTop
-            ? RadialGradient(colors: [Color.lerp(color, Colors.white, 0.4)!, color]).createShader(fullRect)
-            : const LinearGradient(colors: [Colors.white, Color(0xFFE0E0E0)]).createShader(fullRect),
+            ? RadialGradient(
+                colors: [Color.lerp(color, Colors.white, 0.4)!, color],
+              ).createShader(fullRect)
+            : const LinearGradient(colors: [Colors.white, Color(0xFFE0E0E0)])
+                  .createShader(fullRect),
     );
     canvas.restore();
   }
