@@ -68,13 +68,7 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
 
     _spinCtrl.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        if (_winnerIndex > 0) {
-          //_labels.removeAt(_winnerIndex);
-          //await SupabaseService.markWinner(participantId: winner['id'], eventId: widget.eventId, prize: "วงล้อนำโชค");
-        }
-
         setState(() {
-          //_labels.removeAt(_winnerIndex);
           _spinning = false;
           _revealed = true;
         });

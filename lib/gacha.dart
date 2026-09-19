@@ -26,13 +26,6 @@ class GachaScreen extends StatefulWidget {
 class _GachaScreenState extends State<GachaScreen>
     with TickerProviderStateMixin {
   late final List<String> _participants;
-  final List<Map<String, String>> prizes = [
-    {'name': '🏆 ทองคำแท้ 1 บาท', 'sub': 'รางวัลใหญ่'},
-    {'name': '💵 บัตรเงินสด 500.-', 'sub': 'ของรางวัลพิเศษ'},
-    {'name': '🧸 ตุ๊กตาลิมิเต็ด', 'sub': 'ของสะสม'},
-    {'name': '🎟 คูปองส่วนลด 20%', 'sub': 'สิทธิพิเศษ'},
-    {'name': '👕 เสื้อยืดพรีเมียม', 'sub': 'ของที่ระลึก'},
-  ];
 
   final List<Color> palette = const [
     Color(0xFFFF6B6B),
@@ -55,7 +48,6 @@ class _GachaScreenState extends State<GachaScreen>
   late final ConfettiController _confettiCtrl;
 
   GachaState _state = GachaState.idle;
-  Map<String, String> _prize = {'name': '', 'sub': ''};
   Color _winnerColor = Colors.pink;
   int _winnerIndex = 0;
 
@@ -119,13 +111,15 @@ class _GachaScreenState extends State<GachaScreen>
   Future<void> _playGacha() async {
     if (_state != GachaState.idle) return;
     final rnd = Random();
-    _prize = prizes[rnd.nextInt(prizes.length)];
+    final chosen = rnd.nextInt(_participants.length);
     _winnerColor = palette[rnd.nextInt(palette.length)];
 
     SfxService.click();
     HapticFeedback.lightImpact();
 
-    setState(() => _state = GachaState.shaking);
+    setState(() {
+      _winnerIndex = chosen;
+      _state = GachaState.shaking;});
     SfxService.shake();
     await _shakeCtrl.forward(from: 0);
 
@@ -146,7 +140,12 @@ class _GachaScreenState extends State<GachaScreen>
     _shakeCtrl.reset();
     _dropCtrl.reset();
     _crackCtrl.reset();
-    setState(() => _state = GachaState.idle);
+    setState(() {
+      if (_winnerIndex >= 0) {
+        _participants.removeAt(_winnerIndex);
+        //await SupabaseService.markWinner(participantId: winner['id'], eventId: widget.eventId, prize: "วงล้อนำโชค");
+      }
+      _state = GachaState.idle;});
   }
 
   @override
@@ -590,21 +589,12 @@ class _GachaScreenState extends State<GachaScreen>
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    _prize['name'] ?? '',
+                    _participants[_winnerIndex],
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w900,
                       color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    _prize['sub'] ?? '',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.black.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
