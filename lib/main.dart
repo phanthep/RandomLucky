@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gacha1/select_game_screen.dart';
+import 'package:gacha1/mainmenu.dart';
 void main() => runApp(const LuckyApp());
 
 class LuckyApp extends StatelessWidget {
@@ -12,9 +12,9 @@ class LuckyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Gacha Machine',
       theme: ThemeData(
-        fontFamily: 'Roboto', // เปลี่ยนเป็นฟอนต์ที่ต้องการได้
+        fontFamily: 'Roboto',
       ),
-      home: const SelectGameScreen(),
+      home: const MainMenu(),
     );
   }
 }

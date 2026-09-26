@@ -9,7 +9,7 @@ class SelectGameScreen extends StatelessWidget {
     {'full_name': 'Jane Smith'},
     {'full_name': 'Alice Johnson'},
     {'full_name': 'Bob Brown'},
-    /*{'full_name': 'Charlie Davis'},
+    {'full_name': 'Charlie Davis'},
     {'full_name': 'Emily Wilson'},
     {'full_name': 'Frank Miller'},
     {'full_name': 'Grace Lee'},
@@ -24,7 +24,7 @@ class SelectGameScreen extends StatelessWidget {
     {'full_name': 'Paul Adams'},
     {'full_name': 'Quinn Baker'},
     {'full_name': 'Ryan Nelson'},
-    {'full_name': 'Sophia Carter'},*/
+    {'full_name': 'Sophia Carter'},
   ];
 
   @override

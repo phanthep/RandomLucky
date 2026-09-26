@@ -8,10 +8,20 @@ import 'package:gacha1/sfxservice.dart';
 double _lerp(double a, double b, double t) => a + (b - a) * t;
 
 class GachaApp extends StatelessWidget {
-  const GachaApp({super.key});
+  final List<String>? entries;
+  const GachaApp({super.key, this.entries});
   @override
-  Widget build(BuildContext context) =>
-      const MaterialApp(debugShowCheckedModeBanner: false, home: GachaScreen());
+  Widget build(BuildContext context) {
+    final hasMaterialApp =
+        context.findAncestorWidgetOfExactType<MaterialApp>() != null;
+    if (hasMaterialApp) {
+      return GachaScreen(entries: entries);
+    }
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: GachaScreen(entries: entries),
+    );
+  }
 }
 
 enum GachaState { idle, shaking, dropping, cracking, revealed }
@@ -55,8 +65,8 @@ class _GachaScreenState extends State<GachaScreen>
   void initState() {
     super.initState();
     _participants = (widget.entries != null && widget.entries!.isNotEmpty)
-        ? widget.entries!
-        : const [
+        ? List<String>.from(widget.entries!)
+        : [
             '🏆 ทองคำแท้ 1 บาท',
             '💵 บัตรเงินสด 500.-',
             '🧸 ตุ๊กตาลิมิเต็ด',
@@ -109,7 +119,7 @@ class _GachaScreenState extends State<GachaScreen>
   }
 
   Future<void> _playGacha() async {
-    if (_state != GachaState.idle) return;
+    if (_state != GachaState.idle || _participants.isEmpty) return;
     final rnd = Random();
     final chosen = rnd.nextInt(_participants.length);
     _winnerColor = palette[rnd.nextInt(palette.length)];
@@ -119,7 +129,8 @@ class _GachaScreenState extends State<GachaScreen>
 
     setState(() {
       _winnerIndex = chosen;
-      _state = GachaState.shaking;});
+      _state = GachaState.shaking;
+    });
     SfxService.shake();
     await _shakeCtrl.forward(from: 0);
 
@@ -141,58 +152,93 @@ class _GachaScreenState extends State<GachaScreen>
     _dropCtrl.reset();
     _crackCtrl.reset();
     setState(() {
-      if (_winnerIndex >= 0) {
+      if (_winnerIndex >= 0 && _winnerIndex < _participants.length) {
         _participants.removeAt(_winnerIndex);
-        //await SupabaseService.markWinner(participantId: winner['id'], eventId: widget.eventId, prize: "วงล้อนำโชค");
       }
-      _state = GachaState.idle;});
+      _state = GachaState.idle;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF0E0620),
       body: Stack(
         children: [
           _buildBackground(),
           SafeArea(
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: ConfettiWidget(
-                    confettiController: _confettiCtrl,
-                    blastDirectionality: BlastDirectionality.explosive,
-                    numberOfParticles: 28,
-                    emissionFrequency: 0.03,
-                    gravity: 0.25,
-                    colors: palette,
-                  ),
-                ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final screenW = constraints.maxWidth;
+                final screenH = constraints.maxHeight;
+
+                // ขยายตู้กาชาปองให้ใหญ่กว่าเดิม เต็มตา และเด่นชัด
+                // สัดส่วนตู้คือ 300 : 380 (กว้าง : สูง)
+                final maxMachineH = (screenH * 0.65).clamp(460.0, 850.0);
+                final maxMachineW = (maxMachineH * (300 / 380)).clamp(360.0, 680.0);
+                final machineW = min(maxMachineW, screenW * 0.94);
+                final machineH = machineW * (380 / 300);
+
+                return Stack(
+                  alignment: Alignment.center,
                   children: [
-                    ShaderMask(
-                      shaderCallback: (r) => const LinearGradient(
-                        colors: [Color(0xFFFFE066), Color(0xFFFF9F45)],
-                      ).createShader(r),
-                      child: const Text(
-                        '🎰 GACHA MACHINE',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          letterSpacing: 2,
+                    Align(
+                      alignment: Alignment.topCenter,
+                      child: ConfettiWidget(
+                        confettiController: _confettiCtrl,
+                        blastDirectionality: BlastDirectionality.explosive,
+                        numberOfParticles: 28,
+                        emissionFrequency: 0.03,
+                        gravity: 0.25,
+                        colors: palette,
+                      ),
+                    ),
+                    Center(
+                      child: SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ShaderMask(
+                                shaderCallback: (r) => const LinearGradient(
+                                  colors: [Color(0xFFFFE066), Color(0xFFFF9F45)],
+                                ).createShader(r),
+                                child: Text(
+                                  '🎰 GACHA MACHINE',
+                                  style: TextStyle(
+                                    fontSize: (screenW * 0.052).clamp(24.0, 38.0),
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              SizedBox(
+                                width: machineW,
+                                height: machineH,
+                                child: FittedBox(
+                                  fit: BoxFit.contain,
+                                  child: SizedBox(
+                                    width: 300,
+                                    height: 380,
+                                    child: _buildMachine(),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 18),
+                              _buildControls(),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 28),
-                    SizedBox(height: 380, width: 300, child: _buildMachine()),
-                    const SizedBox(height: 26),
-                    _buildControls(),
                   ],
-                ),
-              ],
+                );
+              },
             ),
           ),
           Positioned(
@@ -627,6 +673,19 @@ class _GachaScreenState extends State<GachaScreen>
   }
 
   Widget _buildControls() {
+    if (_participants.isEmpty && _state == GachaState.idle) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Text(
+          'หมดรายการสุ่มแล้ว',
+          style: TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+      );
+    }
     final isBusy =
         _state == GachaState.shaking ||
         _state == GachaState.dropping ||
@@ -634,18 +693,19 @@ class _GachaScreenState extends State<GachaScreen>
     if (_state == GachaState.revealed) {
       return ElevatedButton.icon(
         onPressed: _reset,
-        icon: const Icon(Icons.replay),
+        icon: const Icon(Icons.replay, size: 22),
         label: const Text(
           'เล่นอีกครั้ง',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
           foregroundColor: const Color(0xFF3A1F63),
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
+          elevation: 8,
         ),
       );
     }
@@ -654,13 +714,13 @@ class _GachaScreenState extends State<GachaScreen>
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFFFF4D6D),
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 46, vertical: 18),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-        elevation: 10,
+        elevation: 12,
       ),
       child: Text(
         isBusy ? 'กำลังสุ่ม...' : '🎲 หมุนกาชาปอง',
-        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),
     );
   }

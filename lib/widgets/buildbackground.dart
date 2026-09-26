@@ -1,4 +1,6 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
+
 class BuildBackground extends StatelessWidget {
   final AnimationController idleCtrl;
   const BuildBackground({super.key, required this.idleCtrl});
@@ -13,7 +15,8 @@ class BuildBackground extends StatelessWidget {
         child: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
               colors: [Color(0xFF1B1036), Color(0xFF3A1F63), Color(0xFF0E0620)],
             ),
           ),
@@ -21,15 +24,16 @@ class BuildBackground extends StatelessWidget {
       ),
     );
   }
+}
 
-  class _BokehPainter extends CustomPainter {
+class _BokehPainter extends CustomPainter {
   final double t;
   _BokehPainter(this.t);
   final List<Offset> _seeds = List.generate(18, (i) {
     final r = Random(i * 91);
     return Offset(r.nextDouble(), r.nextDouble());
   });
-  
+
   @override
   void paint(Canvas canvas, Size size) {
     for (var i = 0; i < _seeds.length; i++) {
@@ -43,6 +47,7 @@ class BuildBackground extends StatelessWidget {
       );
     }
   }
+
   @override
   bool shouldRepaint(covariant _BokehPainter oldDelegate) => true;
 }
