@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io' show File;
+import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -14,10 +15,27 @@ class MainMenu extends StatefulWidget {
   State<MainMenu> createState() => _MainMenuState();
 }
 
-class _MainMenuState extends State<MainMenu> {
+class _MainMenuState extends State<MainMenu>
+    with SingleTickerProviderStateMixin {
   List<String> _loadedEntries = [];
   String? _fileName;
   bool _isLoading = false;
+  late final AnimationController _bgCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _bgCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _bgCtrl.dispose();
+    super.dispose();
+  }
 
   /// ฟังก์ชันเปิด File Picker โหลดไฟล์ .csv และ .txt
   Future<void> _pickAndReadFile() async {
@@ -105,7 +123,6 @@ class _MainMenuState extends State<MainMenu> {
       if (line.isEmpty) continue;
 
       if (line.contains(',')) {
-        // แยกตาม comma กรณี CSV
         final parts = line.split(',');
         for (var part in parts) {
           final clean = part.replaceAll('"', '').trim();
@@ -219,132 +236,196 @@ class _MainMenuState extends State<MainMenu> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Gradient Background
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF1B1036),
-                  Color(0xFF3A1F63),
-                  Color(0xFF0E0620),
-                ],
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 24,
-                ),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 520),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // หัวข้อแอพ
-                      ShaderMask(
-                        shaderCallback: (r) => const LinearGradient(
-                          colors: [Color(0xFFFFE066), Color(0xFFFF9F45)],
-                        ).createShader(r),
-                        child: const Text(
-                          '🎉 LUCKY SYSTEM 🎉',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'ระบบสุ่มรางวัล & วงล้อเสี่ยงโชค',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Colors.white.withValues(alpha: 0.7),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-
-                      // ส่วนโหลดไฟล์ .csv / .txt
-                      _buildFileCard(),
-
-                      const SizedBox(height: 36),
-
-                      // ปุ่มเข้าเกมต่างๆ
-                      _buildGameButton(
-                        icon: Icons.casino,
-                        title: '🎰 เล่นตู้กาชาปอง (Gacha)',
-                        subtitle: 'สุ่มทีละคน ลุ้นเปิดแคปซูลแอนิเมชัน 3D',
-                        gradientColors: const [
-                          Color(0xFFFF4D6D),
-                          Color(0xFFC9184A),
-                        ],
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => GachaApp(
-                                entries: _loadedEntries.isNotEmpty
-                                    ? _loadedEntries
-                                    : [
-                                        '🏆 ทองคำแท้ 1 บาท',
-                                        '💵 บัตรเงินสด 500.-',
-                                        '🧸 ตุ๊กตาลิมิเต็ด',
-                                        '🎟 คูปองส่วนลด 20%',
-                                        '👕 เสื้อยืดพรีเมียม',
-                                      ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 18),
-
-                      _buildGameButton(
-                        icon: Icons.track_changes,
-                        title: '🎡 หมุนวงล้อนำโชค (Wheel of Fortune)',
-                        subtitle: 'วงล้อเสี่ยงโชค พร้อมรายชื่อเรียงตามช่องสี',
-                        gradientColors: const [
-                          Color(0xFF4D96FF),
-                          Color(0xFF2E5FCC),
-                        ],
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SpinWheelScreen(
-                                entries: _loadedEntries.isNotEmpty
-                                    ? _loadedEntries
-                                    : null,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+      backgroundColor: const Color(0xFF0E0620),
+      body: SizedBox.expand(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 1. พื้นหลัง Gradient มืดหรูหราเต็มจอ
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFF1B1036),
+                      Color(0xFF3A1F63),
+                      Color(0xFF0E0620),
                     ],
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+
+            // 2. เอฟเฟกต์อนุภาคโบเก้ระยิบระยับเคลื่อนไหว
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _bgCtrl,
+                builder: (context, _) => CustomPaint(
+                  size: Size.infinite,
+                  painter: _MainMenuBokehPainter(_bgCtrl.value),
+                ),
+              ),
+            ),
+
+            // 3. เนื้อหาหน้า Main Menu
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 20,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // หัวข้อพรีเมียมพร้อมประกายดาว
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFFFFD166)
+                                  .withValues(alpha: 0.35),
+                              width: 1,
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.auto_awesome,
+                                size: 14,
+                                color: Color(0xFFFFD166),
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                'RANDOM LUCKY SYSTEM',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFFFD166),
+                                  letterSpacing: 1.5,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        ShaderMask(
+                          shaderCallback: (r) => const LinearGradient(
+                            colors: [Color(0xFFFFE066), Color(0xFFFF9F45)],
+                          ).createShader(r),
+                          child: const Text(
+                            '🎲LUCKY🎡CABINET🎰',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'ระบบสุ่มรางวัล & วงล้อเสี่ยงโชคพรีเมียม',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withValues(alpha: 0.72),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+
+                        // ส่วนโหลดไฟล์ .csv / .txt
+                        _buildFileCard(),
+
+                        const SizedBox(height: 28),
+
+                        // ปุ่มเข้าเกมตู้กาชาปอง
+                        _buildGameButton(
+                          icon: Icons.casino,
+                          title: '🎰 เล่นตู้กาชาปอง',
+                          subtitle: 'ตู้ (Gacha) สุ่มทีละคน ลุ้นเปิดแคปซูล',
+                          gradientColors: const [
+                            Color(0xFFFF4D6D),
+                            Color(0xFFC9184A),
+                          ],
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => GachaApp(
+                                  entries: _loadedEntries.isNotEmpty
+                                      ? _loadedEntries
+                                      : [
+                                          '🏆 ทองคำแท้ 1 บาท',
+                                          '💵 บัตรเงินสด 500.-',
+                                          '🧸 ตุ๊กตาลิมิเต็ด',
+                                          '🎟 คูปองส่วนลด 20%',
+                                          '👕 เสื้อยืดพรีเมียม',
+                                        ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // ปุ่มเข้าเกมวงล้อนำโชค
+                        _buildGameButton(
+                          icon: Icons.track_changes,
+                          title: '🎡 วงล้อนำโชค',
+                          subtitle: 'วงล้อเสี่ยงโชค (Wheel of Fortune)',
+                          gradientColors: const [
+                            Color(0xFF4D96FF),
+                            Color(0xFF2E5FCC),
+                          ],
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SpinWheelScreen(
+                                  entries: _loadedEntries.isNotEmpty
+                                      ? _loadedEntries
+                                      : null,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        // ส่วนเครดิตผู้พัฒนาด้านล่างสุด (Footer)
+                        _buildFooter(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  /// การ์ดข้อมูลและปุ่มโหลดไฟล์
   Widget _buildFileCard() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: Colors.white.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.18),
@@ -352,9 +433,9 @@ class _MainMenuState extends State<MainMenu> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -363,14 +444,25 @@ class _MainMenuState extends State<MainMenu> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFD166).withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFD166), Color(0xFFFF9F45)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFF9F45).withValues(alpha: 0.4),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
                 child: const Icon(
                   Icons.file_upload_outlined,
-                  color: Color(0xFFFFD166),
+                  color: Color(0xFF1B1036),
                   size: 26,
                 ),
               ),
@@ -422,12 +514,15 @@ class _MainMenuState extends State<MainMenu> {
                             color: Colors.white,
                           ),
                         )
-                      : const Icon(Icons.file_open_rounded),
+                      : const Icon(Icons.file_open_rounded, size: 20),
                   label: Text(
                     _isLoading
                         ? 'กำลังอ่านไฟล์...'
                         : '📁 โหลดไฟล์ (.csv, .txt)',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF9C27B0),
@@ -436,7 +531,7 @@ class _MainMenuState extends State<MainMenu> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    elevation: 4,
+                    elevation: 6,
                   ),
                 ),
               ),
@@ -472,6 +567,7 @@ class _MainMenuState extends State<MainMenu> {
     );
   }
 
+  /// ปุ่มเมนูเข้าเล่นเกม
   Widget _buildGameButton({
     required IconData icon,
     required String title,
@@ -490,8 +586,8 @@ class _MainMenuState extends State<MainMenu> {
         ),
         boxShadow: [
           BoxShadow(
-            color: gradientColors.first.withValues(alpha: 0.4),
-            blurRadius: 18,
+            color: gradientColors.first.withValues(alpha: 0.45),
+            blurRadius: 20,
             offset: const Offset(0, 6),
           ),
         ],
@@ -508,7 +604,7 @@ class _MainMenuState extends State<MainMenu> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withValues(alpha: 0.22),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Icon(icon, color: Colors.white, size: 30),
@@ -530,8 +626,8 @@ class _MainMenuState extends State<MainMenu> {
                       Text(
                         subtitle,
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.85),
+                          fontSize: 12.5,
+                          color: Colors.white.withValues(alpha: 0.88),
                         ),
                       ),
                     ],
@@ -549,4 +645,127 @@ class _MainMenuState extends State<MainMenu> {
       ),
     );
   }
+
+  /// พื้นที่แสดงชื่อผู้พัฒนาด้านล่างสุด (Developer Footer)
+  Widget _buildFooter() {
+    return Container(
+      margin: const EdgeInsets.only(top: 36, bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: const Color(0xFFFFD166).withValues(alpha: 0.25),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 18,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFD166).withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.code_rounded,
+                  size: 14,
+                  color: Color(0xFFFFD166),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'พัฒนาโดย',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              const SizedBox(width: 6),
+              ShaderMask(
+                shaderCallback: (r) => const LinearGradient(
+                  colors: [Color(0xFFFFE066), Color(0xFFFFB347)],
+                ).createShader(r),
+                child: const Text(
+                  'นายพันธ์เทพ จิตต์การุณย์',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF9C27B0).withValues(alpha: 0.35),
+                  const Color(0xFF673AB7).withValues(alpha: 0.35),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: const Color(0xFFB983FF).withValues(alpha: 0.4),
+                width: 0.8,
+              ),
+            ),
+            child: const Text(
+              'Freelance Full Stack Developer',
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFFE1BEE7),
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// เอฟเฟกต์อนุภาคโบเก้เคลื่อนไหวสำหรับหน้า Main Menu
+class _MainMenuBokehPainter extends CustomPainter {
+  final double t;
+  _MainMenuBokehPainter(this.t);
+  final List<Offset> _seeds = List.generate(24, (i) {
+    final r = Random(i * 73 + 19);
+    return Offset(r.nextDouble(), r.nextDouble());
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var i = 0; i < _seeds.length; i++) {
+      final s = _seeds[i];
+      final dy = (s.dy + t * 0.03 * (i.isEven ? 1 : -1)) % 1.0;
+      final radius = 2.0 + (i % 4) * 1.8;
+      canvas.drawCircle(
+        Offset(s.dx * size.width, dy * size.height),
+        radius,
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.035 + 0.025 * (i % 3)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MainMenuBokehPainter oldDelegate) => true;
 }
