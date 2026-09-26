@@ -329,7 +329,7 @@ class _MainMenuState extends State<MainMenu>
                             '🎲LUCKY🎡CABINET🎰',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 28,
+                              fontSize: 26,
                               fontWeight: FontWeight.w900,
                               color: Colors.white,
                               letterSpacing: 2,
